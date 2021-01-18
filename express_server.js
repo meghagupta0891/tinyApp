@@ -44,11 +44,17 @@ app.get("/hello", (req, res) => {
   res.render("hello_world", templateVars);
 });  
 
+app.get("/u/:shortURL", (req, res) => {
+  const longURL = urlDatabase[req.params.shortURL];
+  res.redirect(longURL);
+});
+
 app.post("/urls", (req, res) => {
   let newURL = req.body;
   newURL.shortURL = generateRandomString();
   console.log(newURL);  // Log the POST request body to the console
-  res.status(200).send("Ok");         // Respond with 'Ok' (we will replace this)
+  urlDatabase[newURL.shortURL] = newURL.longURL;
+  res.redirect(`/urls/${newURL.shortURL}`);
 });
 
 app.listen(PORT, () => {
