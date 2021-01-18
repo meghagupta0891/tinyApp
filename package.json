@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/meghagupta0891/tinyApp#readme",
   "dependencies": {
+    "ejs": "^3.1.5",
     "express": "^4.17.1"
   }
 }
