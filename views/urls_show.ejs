@@ -8,6 +8,9 @@
 
 <body>
     <%- include('partials/_header') %>
+    <%if(!user) {%>
+      <h2>You are not logged in. Kindly login or register.</h2>
+  <%} else {%>
     <div class="card text-center">
       <div class="card-header"></div>
       <div class="card-body">
@@ -24,7 +27,7 @@
               </form>  
             </h5>          
         </div>
-      
+        <%} %>
       <div class="card-footer text-muted"></div>
   </div>
   <!-- Bootstrap JS -->

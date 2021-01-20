@@ -17,10 +17,21 @@ function generateRandomString() {
     return result;
 }
 
+function urlsForUser(userID) {
+  var userURLs = Object.keys(users).filter(key => users[key].userID === userID);
+  return userURLs;
+}
+
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  "b2xVn2": {
+    longURL :"http://www.lighthouselabs.ca",
+    userID: "aJ48lW" 
+  },
+  "9sm5xK": {
+    longURL : "http://www.google.com",
+    userID: "aJ48lW"
+  }
 };
 
 const users = {};
@@ -82,22 +93,28 @@ app.post("/register", (req, res) => {
 });
 app.get("/urls", (req, res) => {  
   var loggedInUserId = req.cookies['user_id'];
-  const templateVars = { urls: urlDatabase, user: users[loggedInUserId]};
+  const templateVars = { urls: urlsForUser(loggedInUserId), user: users[loggedInUserId]};
   res.render("urls_index",templateVars);
 });
 app.get("/urls/new", (req, res) => {
    var loggedInUserId = req.cookies['user_id'];
-    const templateVars = {
-       user: users[loggedInUserId]
-    };
-    res.render("urls_new",templateVars);
+   if(loggedInUserId) {
+      const templateVars = {
+        user: users[loggedInUserId]
+      };
+      res.render("urls_new",templateVars);
+   }
+   else {
+     res.render('/login');
+   }
+    
 });  
 app.get("/urls/:shortURL", (req, res) => {
   var loggedInUserId = req.cookies['user_id'];
   const templateVars = {
     user: users[loggedInUserId], 
     shortURL: req.params.shortURL, 
-    longURL: urlDatabase[req.params.shortURL] 
+    longURL: urlDatabase[req.params.shortURL].longURL
   };
   res.render("urls_show", templateVars);
 });
@@ -111,7 +128,7 @@ app.get("/hello", (req, res) => {
 });  
 
 app.get("/u/:shortURL", (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL];
+  const longURL = urlDatabase[req.params.shortURL].longURL;
   res.redirect(longURL);
 });
 
@@ -122,16 +139,25 @@ app.post("/logout",(req,res) => {
 
 app.post("/urls", (req, res) => {
   let newURL = req.body;
-  newURL.shortURL = generateRandomString();
-  urlDatabase[newURL.shortURL] = newURL.longURL;
-  res.redirect(`/urls/${newURL.shortURL}`);
+  var shortURL = generateRandomString();
+  urlDatabase[shortURL] = {
+    longURL : newURL.longURL,
+    userID : res.cookie('user_id')
+  }
+  res.redirect(`/urls/${shortURL}`);
 });
 
 app.post("/urls/:id", (req, res) => {
+  let userID = res.cookie('user_id');
+  if(userID && urlDatabase[req.params.id].userID === userID) {
     let newURL = req.body.newURL;
     let shortURL = req.params.id;
-    urlDatabase[shortURL] = newURL;
+    urlDatabase[shortURL].longURL = newURL;
     res.redirect(`/urls`);
+  }
+  else {
+    res.send('You are not authorized to edit this URL');
+  }
 });
 
 app.post("/login",(req,res) => {
@@ -150,8 +176,14 @@ app.post("/login",(req,res) => {
 });
 
 app.post("/urls/:id/delete",(req,res) => {
-   delete urlDatabase[req.params.id];
-   res.redirect('/urls');
+  let userID = res.cookie('user_id');
+  if(userID && urlDatabase[req.params.id].userID === userID) {
+    delete urlDatabase[req.params.id];
+    res.redirect('/urls');
+  }
+  else {
+    res.send('You are not authorized to delete this URL');
+  }
 });
 
 app.listen(PORT, () => {
