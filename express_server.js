@@ -24,20 +24,37 @@ const urlDatabase = {
 };
 
 const users = {};
-
-function emailAlreadyExists(lookupObject,value) {
-  let emailExists = false;
-  for(let data in lookupObject) {
-    if(lookupObject[data].email === value) {
-      emailExists = true;
+function getUserId(lookupObject,email) {
+   let userId = null;
+   for(let data in lookupObject) {
+    if(lookupObject[data].email === email) {
+      userId = data;
       break;
     }
   }
-  return emailExists;
+  return userId;
+}
+
+function passwordMatches(lookupObject,email,password) {
+  let userId = getUserId(lookupObject,email);
+  if(lookupObject[userId].password === password) {
+    return true;
+  }
+  else {
+    return false;
+  }
+}
+
+function emailAlreadyExists(lookupObject,value) {
+  let userId = getUserId(lookupObject,value);
+  return userId == null ? false : true;
 }
 
 app.get("/", (req, res) => {
   res.send("Hello!");
+});
+app.get("/login", (req, res) => {
+  res.render('login');
 });
 app.get("/register", (req, res) => {
   res.render('register');
@@ -46,7 +63,7 @@ app.post("/register", (req, res) => {
     let newEmail = req.body.email;
     let newPassword = req.body.password;
     if(!newEmail || !newPassword) {
-      res.status(400).send("Username and password cannot be empty");
+      res.status(400).send("Email and password cannot be empty");
     }
     else if(emailAlreadyExists(users,newEmail)) {
       res.status(400).send("Email already exists");
@@ -78,7 +95,7 @@ app.get("/urls/new", (req, res) => {
 app.get("/urls/:shortURL", (req, res) => {
   var loggedInUserId = req.cookies['user_id'];
   const templateVars = {
-    username: users[loggedInUserId], 
+    user: users[loggedInUserId], 
     shortURL: req.params.shortURL, 
     longURL: urlDatabase[req.params.shortURL] 
   };
@@ -118,8 +135,18 @@ app.post("/urls/:id", (req, res) => {
 });
 
 app.post("/login",(req,res) => {
-    let username = req.body.username;
-    res.redirect('/urls');
+    let email = req.body.email;
+    let password = req.body.password;
+    if(!emailAlreadyExists(users,email)) {
+      res.status(403).send('This email does not exist');
+    }
+    else if(!passwordMatches(users,email,password)) {
+      res.status(403).send('Incorrect Password');      
+    }
+    else {
+      res.cookie('user_id',getUserId(users,email));
+      res.redirect('/urls');
+    }
 });
 
 app.post("/urls/:id/delete",(req,res) => {
