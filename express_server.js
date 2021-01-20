@@ -26,6 +26,9 @@ const urlDatabase = {
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
+app.get("register", (req, res) => {
+  res.render('register');
+});
 app.get("/urls", (req, res) => {  
   const templateVars = { urls: urlDatabase, username: req.cookies['username']};
   res.render("urls_index",templateVars);
