@@ -68,18 +68,15 @@ app.post("/register", (req, res) => {
       }
       users[userId] = newUser;
       req.session.user_id = userId;
-      //res.cookie('user_id',userId);
       res.redirect('/urls');
     }    
 });
 app.get("/urls", (req, res) => {  
-  //var loggedInUserId = req.cookies['user_id'];
   var loggedInUserId = req.session.user_id;
   const templateVars = { urls: helpers.urlsForUser(loggedInUserId,urlDatabase), user: users[loggedInUserId]};
   res.render("urls_index",templateVars);
 });
 app.get("/urls/new", (req, res) => {
-  // var loggedInUserId = req.cookies['user_id'];
   var loggedInUserId = req.session.user_id;
    if(loggedInUserId) {
       const templateVars = {
@@ -93,7 +90,6 @@ app.get("/urls/new", (req, res) => {
     
 });  
 app.get("/urls/:shortURL", (req, res) => {
-  //var loggedInUserId = req.cookies['user_id'];
   var loggedInUserId = req.session.user_id;
   const templateVars = {
     user: users[loggedInUserId], 

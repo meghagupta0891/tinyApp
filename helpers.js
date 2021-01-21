@@ -1,7 +1,13 @@
 const helpers =  {
-    getUserByEmail : function(email,database) {
-       let userId = this.getUserId(database,email);
-       return database[userId];
+    getUserByEmail : function(email,lookupObject) {
+        let userId = null;
+        for(let data in lookupObject) {
+         if(lookupObject[data].email === email) {
+           userId = data;
+           break;
+         }
+       }
+       return userId;
     },
     getUserId : function(lookupObject,email) {
         let userId = null;
