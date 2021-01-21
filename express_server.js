@@ -1,4 +1,5 @@
 const express = require("express");
+
 const app = express();
 const PORT = 8080; // default port 8080
 app.set("view engine", "ejs");
@@ -7,6 +8,8 @@ const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser());
+
+const bcrypt = require('bcrypt');
 
 function generateRandomString() {
     var chars = '01234567890abcdefghijklmnopqrstuvwxyz';
@@ -48,7 +51,7 @@ function getUserId(lookupObject,email) {
 
 function passwordMatches(lookupObject,email,password) {
   let userId = getUserId(lookupObject,email);
-  if(lookupObject[userId].password === password) {
+  if(bcrypt.compareSync(password,lookupObject[userId].password)) {
     return true;
   }
   else {
@@ -73,6 +76,7 @@ app.get("/register", (req, res) => {
 app.post("/register", (req, res) => {
     let newEmail = req.body.email;
     let newPassword = req.body.password;
+    const hashedPassword = bcrypt.hashSync(newPassword, 10);
     if(!newEmail || !newPassword) {
       res.status(400).send("Email and password cannot be empty");
     }
@@ -84,7 +88,7 @@ app.post("/register", (req, res) => {
       let newUser = {
         id : userId,
         email : newEmail,
-        password: newPassword
+        password: hashedPassword
       }
       users[userId] = newUser;
       res.cookie('user_id',userId);
