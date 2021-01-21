@@ -1,5 +1,7 @@
 const express = require("express");
 
+const helpers = require('./helpers');
+
 const app = express();
 const PORT = 8080; // default port 8080
 app.set("view engine", "ejs");
@@ -12,23 +14,18 @@ const bcrypt = require('bcrypt');
 const cookieSession = require('cookie-session')
 app.use(cookieSession({
   name: 'session',
-  keys: [user_id]
+  keys: ['user_id']
 }))
 
-function generateRandomString() {
-    var chars = '01234567890abcdefghijklmnopqrstuvwxyz';
-    var result = '';
-    for (var i = 6; i > 0; --i) {
-        result += chars[Math.floor(Math.random() * chars.length)];
-    }
-    return result;
+function passwordMatches(lookupObject,email,password) {
+  let userId = helpers.getUserId(lookupObject,email);
+  if(bcrypt.compareSync(password,lookupObject[userId].password)) {
+    return true;
+  }
+  else {
+    return false;
+  }
 }
-
-function urlsForUser(userID) {
-  var userURLs = Object.keys(users).filter(key => users[key].userID === userID);
-  return userURLs;
-}
-
 
 const urlDatabase = {
   "b2xVn2": {
@@ -42,31 +39,6 @@ const urlDatabase = {
 };
 
 const users = {};
-function getUserId(lookupObject,email) {
-   let userId = null;
-   for(let data in lookupObject) {
-    if(lookupObject[data].email === email) {
-      userId = data;
-      break;
-    }
-  }
-  return userId;
-}
-
-function passwordMatches(lookupObject,email,password) {
-  let userId = getUserId(lookupObject,email);
-  if(bcrypt.compareSync(password,lookupObject[userId].password)) {
-    return true;
-  }
-  else {
-    return false;
-  }
-}
-
-function emailAlreadyExists(lookupObject,value) {
-  let userId = getUserId(lookupObject,value);
-  return userId == null ? false : true;
-}
 
 app.get("/", (req, res) => {
   res.send("Hello!");
@@ -84,11 +56,11 @@ app.post("/register", (req, res) => {
     if(!newEmail || !newPassword) {
       res.status(400).send("Email and password cannot be empty");
     }
-    else if(emailAlreadyExists(users,newEmail)) {
+    else if(helpers.emailAlreadyExists(users,newEmail)) {
       res.status(400).send("Email already exists");
     }
     else {
-      let userId = generateRandomString();
+      let userId = helpers.generateRandomString();
       let newUser = {
         id : userId,
         email : newEmail,
@@ -103,7 +75,7 @@ app.post("/register", (req, res) => {
 app.get("/urls", (req, res) => {  
   //var loggedInUserId = req.cookies['user_id'];
   var loggedInUserId = req.session.user_id;
-  const templateVars = { urls: urlsForUser(loggedInUserId), user: users[loggedInUserId]};
+  const templateVars = { urls: helpers.urlsForUser(loggedInUserId,urlDatabase), user: users[loggedInUserId]};
   res.render("urls_index",templateVars);
 });
 app.get("/urls/new", (req, res) => {
@@ -116,7 +88,7 @@ app.get("/urls/new", (req, res) => {
       res.render("urls_new",templateVars);
    }
    else {
-     res.render('/login');
+     res.render('login');
    }
     
 });  
@@ -151,7 +123,7 @@ app.get("/logout",(req,res) => {
 
 app.post("/urls", (req, res) => {
   let newURL = req.body;
-  var shortURL = generateRandomString();
+  var shortURL = helpers.generateRandomString();
   urlDatabase[shortURL] = {
     longURL : newURL.longURL,
     userID : req.session.user_id
@@ -175,14 +147,14 @@ app.post("/urls/:id", (req, res) => {
 app.post("/login",(req,res) => {
     let email = req.body.email;
     let password = req.body.password;
-    if(!emailAlreadyExists(users,email)) {
+    if(!helpers.emailAlreadyExists(users,email)) {
       res.status(403).send('This email does not exist');
     }
     else if(!passwordMatches(users,email,password)) {
       res.status(403).send('Incorrect Password');      
     }
     else {
-      res.cookie('user_id',getUserId(users,email));
+      res.cookie('user_id',helpers.getUserId(users,email));
       res.redirect('/urls');
     }
 });
