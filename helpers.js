@@ -32,14 +32,12 @@ const helpers =  {
         return result;
     },
     urlsForUser : function(userID,urls) {
-      console.log('user id is ',userID);
       let userURLs = {};
       for(let url in urls) {
           if(urls[url].userID === userID) {
               userURLs[url] = urls[url];
           }
       }
-      console.log('urls are'+ JSON.stringify(userURLs));
       return userURLs;
     } 
 }
