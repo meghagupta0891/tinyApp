@@ -145,7 +145,7 @@ app.get("/u/:shortURL", (req, res) => {
 });
 
 app.get("/logout",(req,res) => {
-   res.clearCookie("user_id");
+   req.session = null;
    res.redirect('/urls');
 });
 
