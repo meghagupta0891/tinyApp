@@ -5,11 +5,15 @@ const PORT = 8080; // default port 8080
 app.set("view engine", "ejs");
 
 const bodyParser = require("body-parser");
-const cookieParser = require("cookie-parser");
 app.use(bodyParser.urlencoded({extended: true}));
-app.use(cookieParser());
 
 const bcrypt = require('bcrypt');
+
+const cookieSession = require('cookie-session')
+app.use(cookieSession({
+  name: 'session',
+  keys: [user_id]
+}))
 
 function generateRandomString() {
     var chars = '01234567890abcdefghijklmnopqrstuvwxyz';
@@ -91,17 +95,20 @@ app.post("/register", (req, res) => {
         password: hashedPassword
       }
       users[userId] = newUser;
-      res.cookie('user_id',userId);
+      req.session.user_id = userId;
+      //res.cookie('user_id',userId);
       res.redirect('/urls');
     }    
 });
 app.get("/urls", (req, res) => {  
-  var loggedInUserId = req.cookies['user_id'];
+  //var loggedInUserId = req.cookies['user_id'];
+  var loggedInUserId = req.session.user_id;
   const templateVars = { urls: urlsForUser(loggedInUserId), user: users[loggedInUserId]};
   res.render("urls_index",templateVars);
 });
 app.get("/urls/new", (req, res) => {
-   var loggedInUserId = req.cookies['user_id'];
+  // var loggedInUserId = req.cookies['user_id'];
+  var loggedInUserId = req.session.user_id;
    if(loggedInUserId) {
       const templateVars = {
         user: users[loggedInUserId]
@@ -114,7 +121,8 @@ app.get("/urls/new", (req, res) => {
     
 });  
 app.get("/urls/:shortURL", (req, res) => {
-  var loggedInUserId = req.cookies['user_id'];
+  //var loggedInUserId = req.cookies['user_id'];
+  var loggedInUserId = req.session.user_id;
   const templateVars = {
     user: users[loggedInUserId], 
     shortURL: req.params.shortURL, 
@@ -136,7 +144,7 @@ app.get("/u/:shortURL", (req, res) => {
   res.redirect(longURL);
 });
 
-app.post("/logout",(req,res) => {
+app.get("/logout",(req,res) => {
    res.clearCookie("user_id");
    res.redirect('/urls');
 });
@@ -146,13 +154,13 @@ app.post("/urls", (req, res) => {
   var shortURL = generateRandomString();
   urlDatabase[shortURL] = {
     longURL : newURL.longURL,
-    userID : res.cookie('user_id')
+    userID : req.session.user_id
   }
   res.redirect(`/urls/${shortURL}`);
 });
 
 app.post("/urls/:id", (req, res) => {
-  let userID = res.cookie('user_id');
+  let userID = req.session.user_id;
   if(userID && urlDatabase[req.params.id].userID === userID) {
     let newURL = req.body.newURL;
     let shortURL = req.params.id;
@@ -180,7 +188,7 @@ app.post("/login",(req,res) => {
 });
 
 app.post("/urls/:id/delete",(req,res) => {
-  let userID = res.cookie('user_id');
+  let userID = req.session.user_id;
   if(userID && urlDatabase[req.params.id].userID === userID) {
     delete urlDatabase[req.params.id];
     res.redirect('/urls');
