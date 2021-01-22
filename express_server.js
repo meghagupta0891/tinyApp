@@ -17,6 +17,7 @@ app.use(cookieSession({
   keys: ['user_id']
 }))
 
+//matches if the password match the entry to the corresponding emailID in DB
 function passwordMatches(lookupObject,email,password) {
   let userId = helpers.getUserId(lookupObject,email);
   if(bcrypt.compareSync(password,lookupObject[userId].password)) {
@@ -26,6 +27,8 @@ function passwordMatches(lookupObject,email,password) {
     return false;
   }
 }
+
+// URLs DATABASE
 
 const urlDatabase = {
   "b2xVn2": {
@@ -38,26 +41,32 @@ const urlDatabase = {
   }
 };
 
+// USERS DATABASE
 const users = {};
 
 app.get("/", (req, res) => {
   res.redirect('/urls');
 });
 app.get("/login", (req, res) => {
-  res.render('login');
+  res.render('login',{errorMessage:""});
 });
 app.get("/register", (req, res) => {
-  res.render('register');
+  res.render('register',{errorMessage:""});
 });
 app.post("/register", (req, res) => {
     let newEmail = req.body.email;
     let newPassword = req.body.password;
+    //encypt the password to make it secure
     const hashedPassword = bcrypt.hashSync(newPassword, 10);
     if(!newEmail || !newPassword) {
-      res.status(400).send("Email and password cannot be empty");
+      let message = "Email and password cannot be empty";
+      //send status code and error messafe
+      res.status(400).render("register",{errorMessage:message});
     }
     else if(helpers.emailAlreadyExists(users,newEmail)) {
-      res.status(400).send("Email already exists");
+      let message = "Email already exists";
+      //send status code and error messafe
+      res.status(400).render("register",{errorMessage:message});
     }
     else {
       let userId = helpers.generateRandomString();
@@ -68,7 +77,7 @@ app.post("/register", (req, res) => {
       }
       users[userId] = newUser;
       req.session.user_id = userId;
-      res.redirect('/urls');
+      res.status(200).redirect('/urls');
     }    
 });
 app.get("/urls", (req, res) => {  
@@ -78,25 +87,36 @@ app.get("/urls", (req, res) => {
 });
 app.get("/urls/new", (req, res) => {
   var loggedInUserId = req.session.user_id;
-   if(loggedInUserId) {
+    if(loggedInUserId) {
       const templateVars = {
         user: users[loggedInUserId]
       };
-      res.render("urls_new",templateVars);
-   }
-   else {
-     res.render('login');
-   }
-    
+      res.status(200).render("urls_new",templateVars);
+    }
+    else {
+      //redirect user to login page if he tries to create a new URL
+      res.status(200).redirect('/login');
+    }  
 });  
 app.get("/urls/:shortURL", (req, res) => {
   var loggedInUserId = req.session.user_id;
-  const templateVars = {
-    user: users[loggedInUserId], 
-    shortURL: req.params.shortURL, 
-    longURL: urlDatabase[req.params.shortURL].longURL
-  };
-  res.render("urls_show", templateVars);
+  if(!loggedInUserId) {
+    res.status(401).send('You are not logged in');
+  }
+  else {
+    //look if logged in user is authorized to access the requested URL
+    if(!(req.params.shortURL in helpers.urlsForUser(loggedInUserId,urlDatabase))){
+      res.status(403).send('You are not authorized to access this URL');
+    }
+    else {
+      const templateVars = {
+        user: users[loggedInUserId], 
+        shortURL: req.params.shortURL, 
+        longURL: urlDatabase[req.params.shortURL].longURL
+      };
+      res.render("urls_show", templateVars);
+    }
+  }
 });
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
@@ -108,8 +128,14 @@ app.get("/hello", (req, res) => {
 });  
 
 app.get("/u/:shortURL", (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL].longURL;
-  res.redirect(longURL);
+  if(req.params.shortURL in urlDatabase) {
+    const longURL = urlDatabase[req.params.shortURL].longURL;
+    //redirect the user to the actual long URL
+    res.redirect(longURL);
+  }
+  else {
+    res.status(404).send('This entry does not exist in DB');
+  }
 });
 
 app.get("/logout",(req,res) => {
@@ -133,25 +159,30 @@ app.post("/urls/:id", (req, res) => {
     let newURL = req.body.newURL;
     let shortURL = req.params.id;
     urlDatabase[shortURL].longURL = newURL;
-    res.redirect(`/urls`);
+    res.status(200).redirect(`/urls`);
   }
   else {
-    res.send('You are not authorized to edit this URL');
+    res.status(403).send('You are not authorized to edit this URL');
   }
 });
 
 app.post("/login",(req,res) => {
     let email = req.body.email;
     let password = req.body.password;
+    //check if input matches database or not
     if(!helpers.emailAlreadyExists(users,email)) {
-      res.status(403).send('This email does not exist');
+      var message = 'This email does not exist';
+      res.status(403).render('login',{errorMessage:message});
     }
     else if(!passwordMatches(users,email,password)) {
-      res.status(403).send('Incorrect Password');      
+      var message = 'Incorrect Password';
+      res.status(403).render('login',{errorMessage:message});  
     }
     else {
-      res.cookie('user_id',helpers.getUserId(users,email));
-      res.redirect('/urls');
+      //get userID of the the logged in user
+      let userId = helpers.getUserId(users,email);
+      req.session.user_id = userId;
+      res.status(200).redirect('/urls');
     }
 });
 
@@ -159,10 +190,10 @@ app.post("/urls/:id/delete",(req,res) => {
   let userID = req.session.user_id;
   if(userID && urlDatabase[req.params.id].userID === userID) {
     delete urlDatabase[req.params.id];
-    res.redirect('/urls');
+    res.status(200).redirect('/urls');
   }
   else {
-    res.send('You are not authorized to delete this URL');
+    res.status(403).send('You are not authorized to delete this URL');
   }
 });
 

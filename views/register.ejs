@@ -1,5 +1,9 @@
+
 <form method="POST" action="/register">
    EmailID:  <input name="email" type="email">
    Password:  <input name="password" type="password">
     <button type="submit">Register</button>
-  </form>  
+</form>
+<%if(errorMessage && errorMessage.length > 0) {%>
+  <span style="color:red"><%=errorMessage%></span>
+  <%}%>

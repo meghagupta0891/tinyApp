@@ -3,3 +3,6 @@
    Password: <input type="password" name="password">
     <button type="submit">Login</button>
 </form>  
+<%if(errorMessage && errorMessage.length > 0) {%>
+  <span style="color:red"><%=errorMessage%></span>
+  <%}%>
